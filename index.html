@@ -23,12 +23,56 @@
     .refresh-btn:hover { background: #1e293b; }
     .updated-text { font-size: 0.82rem; color: #64748b; font-variant-numeric: tabular-nums; }
 
+    /* Unit Toggle */
+    .unit-toggle { display: inline-flex; background: white; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+    .unit-btn { background: none; border: none; padding: 0.45rem 0.75rem; font: inherit; font-size: 0.88rem; font-weight: 600; color: #475569; cursor: pointer; transition: background 0.15s, color 0.15s; }
+    .unit-btn + .unit-btn { border-left: 1px solid #cbd5e1; }
+    .unit-btn:hover { background: #f8fafc; }
+    .unit-btn.active { background: #2c3e50; color: white; }
+    .unit-btn.active:hover { background: #1e293b; }
+
     /* Desktop Main Table */
     table.main-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    /* Middle is correct again: with the country moved out of its own sub-row,
+       every cell in a row is one line, so there is nothing to line up against
+       and middle degrades gracefully if a name is ever clipped to two lines. */
     table.main-table th, table.main-table td { padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid #eee; vertical-align: middle; }
     table.main-table th { background: #2c3e50; color: white; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+
+    /* Numeric Alignment
+       All six numeric columns are centred, not right-aligned. The three High / Low
+       columns are two equal halves filling the cell (see .range-split), so their
+       content sits on the column's centre line; right-aligning the other three
+       would put them on a different axis from the headers beside them. One rule
+       for every numeric column reads better than two. Only th/td carry the class,
+       so the Locality column and the mobile card labels are untouched. */
+    table.main-table th.num-col { text-align: center; }
+    table.main-table td.num-col { text-align: center; font-variant-numeric: tabular-nums; }
+
+    /* Sortable Headers
+       The header text is wrapped in a real button so it is keyboard operable;
+       a click handler on the th alone would not be. The direction glyph only
+       appears on the active column, because the narrow columns have no room to
+       reserve space for an idle indicator on all seven.
+       "High / Low" is kept unbreakable so the wrap happens after "Tomorrow"
+       rather than after "High", which gives two balanced lines. */
+    .sort-btn { background: none; border: none; padding: 0; margin: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; text-align: inherit; cursor: pointer; width: 100%; }
+    .nowrap { white-space: nowrap; }
+
+    /* Single-Value Tint
+       Real Feel is a temperature too, but its cell keeps the fixed yellow column
+       marker. Painting the wash on the value rather than the cell adds the hue
+       without giving up the marker, which is how the Abs button works as well. */
+    .tint-val { display: inline-block; padding: 0.05rem 0.3rem; border-radius: 4px; }
+    .sort-btn:hover { color: #cbd5e1; }
+    .sort-btn:focus-visible { outline: 2px solid #93c5fd; outline-offset: 2px; }
+    th[aria-sort="ascending"] .sort-btn::after { content: " \25B2"; font-size: 0.8em; }
+    th[aria-sort="descending"] .sort-btn::after { content: " \25BC"; font-size: 0.8em; }
+
     table.main-table tr:last-child td { border-bottom: none; }
-    table.main-table tr:hover td { background: #f8fafc; }
+    /* An inset overlay rather than a background, so hover darkens a tinted cell
+       instead of replacing the temperature tint with flat grey. */
+    table.main-table tr:hover td { box-shadow: inset 0 0 0 999px rgba(15, 23, 42, 0.035); }
     table.main-table tr.hidden-region { display: none; }
 
     /* Real Feel Highlight */
@@ -36,12 +80,19 @@
     td.real-feel-col { background: #fefce8; }
     table.main-table tr:hover td.real-feel-col { background: #fef9c3; }
 
-    /* Locality Cell & Right-Aligned Clock */
+    /* Locality Cell: City and Clock on One Line
+       The country used to sit in its own sub-row, which made this the only
+       two-line cell and set the row height for the whole table. It is now a
+       tooltip on the name plus a visually hidden span, so the cell is one line
+       and the clock rides on that line. The name is the only part that may be
+       clipped, and the clock is the only part that must never shrink. */
     .loc-cell { display: flex; align-items: center; gap: 0.7rem; width: 100%; }
-    .loc-info { flex: 1; min-width: 0; }
-    .city { font-weight: 600; font-size: 1.02rem; color: #111; display: block; }
-    .sub-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-top: 0.15rem; }
-    .country { font-size: 0.82rem; color: #666; }
+    .loc-info { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.5rem; }
+    .city { flex: 1 1 auto; min-width: 0; font-weight: 600; font-size: 1.02rem; color: #111; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Off-screen rather than display: none: a title attribute is reachable by
+       neither a screen reader nor a keyboard user, and the city name is not
+       focusable, so the country has to exist in the accessibility tree too. */
+    .country { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
     .local-clock { font-size: 0.8rem; font-weight: 600; color: #475569; background: #f1f5f9; padding: 0.1rem 0.45rem; border-radius: 4px; font-variant-numeric: tabular-nums; flex-shrink: 0; }
 
     .toggle-btn { background: #e2e8f0; border: none; border-radius: 5px; width: 28px; height: 28px; font-family: monospace; font-weight: bold; font-size: 0.95rem; cursor: pointer; color: #1e293b; flex-shrink: 0; transition: background 0.15s; }
@@ -52,11 +103,42 @@
     .abs-btn { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.35rem 0.6rem; text-align: left; cursor: pointer; font-family: inherit; width: 100%; transition: background 0.15s, border-color 0.15s; }
     .abs-btn:hover { background: #eff6ff; border-color: #93c5fd; }
     .abs-btn .primary-val { font-size: 0.95rem; font-weight: 600; color: #1e293b; display: block; font-variant-numeric: tabular-nums; }
-    .abs-btn .secondary-val { font-size: 0.8rem; color: #64748b; display: block; font-variant-numeric: tabular-nums; }
+    /* The buttons inside the numeric cells set their own text-align: left, so
+       the column alignment has to be restated on their contents. */
+    table.main-table td.num-col .abs-btn { text-align: center; }
+    table.main-table td.num-col .cell-btn { text-align: center; }
+
+    /* Clickable Temperature / Real Feel Cells */
+    .cell-btn { display: block; width: 100%; background: none; border: none; padding: 0.15rem 0.25rem; margin: -0.15rem -0.25rem; border-radius: 6px; font: inherit; color: inherit; text-align: left; cursor: pointer; transition: box-shadow 0.15s; }
+
+    /* Inset overlay rather than an opaque fill, so hovering a cell that carries a
+       temperature tint darkens it instead of hiding it. */
+    .cell-btn:hover { box-shadow: inset 0 0 0 999px rgba(37, 99, 235, 0.06); }
+
+    /* Two-Value Split
+       A High / Low pair is laid out as two equal halves spanning the full cell,
+       each half carrying its own wash and centring its own number. The boundary
+       therefore always falls exactly between the two values, whatever the column
+       width, and each number sits over the hue it describes. A background
+       gradient could not do this: it is pinned to the cell midpoint, so a
+       right-aligned pair would put both numbers over the same hue.
+       The slash is absolutely positioned on the boundary so it neither shifts
+       the halves nor breaks the 50 / 50 division. */
+    .range-split { display: flex; width: 100%; position: relative; }
+    .range-half { flex: 1 1 50%; min-width: 0; text-align: center; padding: 0.05rem 0.1rem; }
+    /* Matched by adjacency, not :last-child: the slash span is the container's
+       last child, so :last-child would never reach the low-value half. */
+    .range-half:first-child { border-radius: 4px 0 0 4px; }
+    .range-half + .range-half { border-radius: 0 4px 4px 0; }
+    .range-slash { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #94a3b8; font-size: 0.9em; }
 
     /* Shimmer Skeleton */
     .skeleton { display: inline-block; height: 14px; width: 70px; background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 4px; }
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .skeleton { animation: none; }
+    }
 
     /* Smooth Vertical Modals */
     .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
@@ -76,6 +158,24 @@
     table.popup-table td { padding: 0.55rem 1rem; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
     table.popup-table tr:nth-child(even) td { background: #fafafa; }
     table.popup-table td.rf-cell { background: #fefce8; font-weight: 600; }
+    /* Temperature cells tint their own values, never the cell, so the zebra rule
+       above still applies to the row. */
+    table.popup-table td.temp-cell { font-variant-numeric: tabular-nums; }
+
+    /* Every popup column except the leading label column holds a number, so they
+       are centred to match the main table. The label column stays left, because a
+       month name or a weekday reads wrong centred. */
+    table.popup-table th:not(:first-child), table.popup-table td:not(:first-child) { text-align: center; }
+
+    /* Mobile Sort Bar
+       The desktop headers are hidden below 768px, so the same sort keys are
+       offered as a chip strip there. Hidden by default; shown by the media query. */
+    .sort-controls { display: none; align-items: center; flex-wrap: wrap; gap: 0.4rem; background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.4rem 0.55rem; box-shadow: 0 1px 2px rgba(0,0,0,0.04); margin-bottom: 1rem; }
+    .sort-label { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: #64748b; }
+    .sort-chip { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.2rem 0.5rem; font: inherit; font-size: 0.8rem; font-weight: 500; color: #334155; cursor: pointer; }
+    .sort-chip:hover { background: #e2e8f0; }
+    .sort-chip.active { background: #2c3e50; border-color: #2c3e50; color: white; }
+    .sort-status { font-size: 0.78rem; color: #64748b; }
 
     .error { background: #fee2e2; color: #991b1b; padding: 1rem; border-radius: 8px; border: 1px solid #f87171; margin-bottom: 1rem; }
 
@@ -95,6 +195,17 @@
       table.main-table td:first-child::before { display: none; }
       .toggle-btn { width: 34px; height: 34px; font-size: 1rem; }
       .abs-btn { grid-column: 2 / 4; display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0.65rem; }
+      .cell-btn { grid-column: 2 / 4; }
+      /* In card mode a paired cell still holds the two-half split, which fills
+         whatever width it is given, so the cell's own alignment has no effect on
+         it. These two rules only stop the empty space beside a short value from
+         being pushed to the right edge of the card. */
+      table.main-table td.num-col { text-align: left; }
+      table.main-table td.num-col .abs-btn { text-align: left; }
+      table.main-table td.num-col .cell-btn { text-align: left; }
+      /* The headers are hidden here, so the sort controls would otherwise be
+         unreachable on a phone. */
+      .sort-controls { display: flex; }
     }
   </style>
 </head>
@@ -103,10 +214,18 @@
     <div class="top-bar">
       <h1>Current Weather</h1>
       <div class="controls">
-        <label class="filter-label">
-          <input type="checkbox" id="region-toggle" onchange="toggleExtraRegions()">
-          <span>España / Özbekiston / Portugal / Türkiye / UAE</span>
+        <label class="filter-label" title="United States / Deutschland / Україна">
+          <input type="checkbox" id="region-toggle-usa" onchange="toggleExtraRegions()">
+          <span>US / DE / UA</span>
         </label>
+        <label class="filter-label" title="España / Özbekiston / Portugal / Türkiye / UAE">
+          <input type="checkbox" id="region-toggle" onchange="toggleExtraRegions()">
+          <span>ES / UZ / PT / TR / AE</span>
+        </label>
+        <div class="unit-toggle" role="group" aria-label="Temperature unit">
+          <button type="button" id="unit-c" class="unit-btn active" onclick="setUnit('C')" aria-pressed="true" title="Show Celsius">°C</button>
+          <button type="button" id="unit-f" class="unit-btn" onclick="setUnit('F')" aria-pressed="false" title="Show Fahrenheit">°F</button>
+        </div>
         <button class="refresh-btn" onclick="loadWeather()">Refresh</button>
         <span id="last-updated" class="updated-text">Loading...</span>
       </div>
@@ -114,16 +233,29 @@
 
     <div id="error-box"></div>
 
+    <div class="sort-controls" role="group" aria-label="Sort locations">
+      <span class="sort-label">Sort</span>
+      <span id="unit-note" class="sort-status"></span>
+      <button type="button" class="sort-chip" data-sort-key="name" onclick="sortRows('name')">Locality</button>
+      <button type="button" class="sort-chip" data-sort-key="temp" onclick="sortRows('temp')">Temp</button>
+      <button type="button" class="sort-chip" data-sort-key="rf" onclick="sortRows('rf')">Real Feel</button>
+      <button type="button" class="sort-chip" data-sort-key="hum" onclick="sortRows('hum')">Humidity</button>
+      <button type="button" class="sort-chip" data-sort-key="today" onclick="sortRows('today')">24h</button>
+      <button type="button" class="sort-chip" data-sort-key="tom" onclick="sortRows('tom')">Tomorrow</button>
+      <button type="button" class="sort-chip" data-sort-key="abs" onclick="sortRows('abs')">Abs</button>
+      <span id="sort-status" class="sort-status"></span>
+    </div>
+
     <table class="main-table">
       <thead>
         <tr>
-          <th style="width: 24%;">Locality</th>
-          <th style="width: 11%;">Temp</th>
-          <th class="real-feel-col" style="width: 11%;">Real Feel</th>
-          <th style="width: 10%;">Humidity</th>
-          <th style="width: 14%;">24h High / Low</th>
-          <th style="width: 14%;">Tomorrow High / Low</th>
-          <th style="width: 16%;">Abs High / Low</th>
+          <th style="width: 24%;" aria-sort="none"><button type="button" class="sort-btn" data-sort-key="name" data-label="Locality" onclick="sortRows('name')">Locality</button></th>
+          <th class="num-col" style="width: 11%;" aria-sort="none"><button type="button" class="sort-btn" data-sort-key="temp" data-label="Temp" onclick="sortRows('temp')">Temp</button></th>
+          <th class="real-feel-col num-col" style="width: 11%;" aria-sort="none"><button type="button" class="sort-btn" data-sort-key="rf" data-label="Real Feel" onclick="sortRows('rf')">Real Feel</button></th>
+          <th class="num-col" style="width: 10%;" aria-sort="none"><button type="button" class="sort-btn" data-sort-key="hum" data-label="Humidity" onclick="sortRows('hum')">Humidity</button></th>
+          <th class="num-col" style="width: 14%;" aria-sort="none"><button type="button" class="sort-btn" data-sort-key="today" data-label="24h High / Low" onclick="sortRows('today')">24h <span class="nowrap">High / Low</span></button></th>
+          <th class="num-col" style="width: 14%;" aria-sort="none"><button type="button" class="sort-btn" data-sort-key="tom" data-label="Tomorrow High / Low" onclick="sortRows('tom')">Tomorrow <span class="nowrap">High / Low</span></button></th>
+          <th class="num-col" style="width: 16%;" aria-sort="none"><button type="button" class="sort-btn" data-sort-key="abs" data-label="Abs High / Low" onclick="sortRows('abs')">Abs <span class="nowrap">High / Low</span></button></th>
         </tr>
       </thead>
       <tbody id="weather-tbody"></tbody>
@@ -169,12 +301,37 @@
           <thead>
             <tr>
               <th>Month</th>
-              <th>Avg High / Low</th>
+              <th>Avg <span class="nowrap">High / Low</span></th>
               <th>Avg Humidity</th>
-              <th>Abs High / Low</th>
+              <th>Abs <span class="nowrap">High / Low</span></th>
             </tr>
           </thead>
           <tbody id="modal-climate-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="daily-modal" class="modal-backdrop" onclick="closeModalOnBackdrop(event, 'daily-modal')">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <span id="daily-city" class="modal-title">City</span>
+          <span id="daily-country" class="modal-sub">10-Day Forecast</span>
+        </div>
+        <button class="close-btn" onclick="closeModal('daily-modal')" title="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <table class="popup-table">
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th><span class="nowrap">High / Low</span></th>
+              <th>Real Feel <span class="nowrap">High / Low</span></th>
+              <th>Humidity</th>
+            </tr>
+          </thead>
+          <tbody id="modal-daily-body"></tbody>
         </table>
       </div>
     </div>
@@ -273,13 +430,13 @@
     };
 
     const LOCATIONS = [
-      { name: "Vienna, VA", country: "United States", tz: "America/New_York", lat: 38.9012, lon: -77.2653, extra: false },
-      { name: "Annapolis, MD", country: "United States", tz: "America/New_York", lat: 38.9784, lon: -76.4922, extra: false },
-      { name: "Denver, CO", country: "United States", tz: "America/Denver", lat: 39.7392, lon: -104.9903, extra: false },
+      { name: "Vienna, VA", country: "United States", tz: "America/New_York", lat: 38.9012, lon: -77.2653, extra: true, extraGroup: "usa" },
+      { name: "Annapolis, MD", country: "United States", tz: "America/New_York", lat: 38.9784, lon: -76.4922, extra: true, extraGroup: "usa" },
+      { name: "Denver, CO", country: "United States", tz: "America/Denver", lat: 39.7392, lon: -104.9903, extra: true, extraGroup: "usa" },
       { name: "Златни пясъци", country: "България", tz: "Europe/Sofia", lat: 43.2850, lon: 28.0418, extra: false },
       { name: "Ladispoli", country: "Italia", tz: "Europe/Rome", lat: 41.9539, lon: 12.0736, extra: false },
-      { name: "Черкаси", country: "Україна", tz: "Europe/Kyiv", lat: 49.4444, lon: 32.0598, extra: false },
-      { name: "Zeuthen", country: "Deutschland", tz: "Europe/Berlin", lat: 52.3497, lon: 13.6317, extra: false },
+      { name: "Черкаси", country: "Україна", tz: "Europe/Kyiv", lat: 49.4444, lon: 32.0598, extra: true, extraGroup: "usa" },
+      { name: "Zeuthen", country: "Deutschland", tz: "Europe/Berlin", lat: 52.3497, lon: 13.6317, extra: true, extraGroup: "usa" },
       { name: "أبو ظبي", country: "الإمارات العربية المتحدة", tz: "Asia/Dubai", lat: 24.4539, lon: 54.3773, extra: true },
       { name: "دبي", country: "الإمارات العربية المتحدة", tz: "Asia/Dubai", lat: 25.2048, lon: 55.2708, extra: true },
       { name: "Ğallaorol", country: "Özbekiston", tz: "Asia/Samarkand", lat: 40.0222, lon: 67.5887, extra: true },
@@ -293,6 +450,7 @@
     ];
 
     let weatherResults = [];
+    let currentUnit = "C";
 
     function toF(c) {
       return ((c * 9 / 5) + 32).toFixed(1);
@@ -300,6 +458,105 @@
 
     function toFInt(c) {
       return Math.round((c * 9 / 5) + 32);
+    }
+
+    /* Unit-aware formatting. Values are stored in Celsius and converted on render.
+       The unit itself is not part of the value: the page states it once, beside the
+       toggle, and each popup states it once in its subtitle. */
+    function unitSuffix() {
+      return currentUnit === "C" ? "°C" : "°F";
+    }
+
+    function formatTemp(c) {
+      return currentUnit === "C" ? Number(c).toFixed(1) + "°" : toF(c) + "°";
+    }
+
+    function formatRangeValue(c) {
+      return (currentUnit === "C" ? Math.round(c) : toFInt(c)) + "°";
+    }
+
+    /* A single value with its wash on the text rather than the cell, for columns
+       that keep their own background (Real Feel) or share a row with one. */
+    function formatValueTinted(c) {
+      return '<span class="tint-val" style="background: ' + tintCss(c) + '">' + formatTemp(c) + '</span>';
+    }
+
+    /* The cell is divided in half: high on the left, low on the right, each
+       centred in its half over its own wash. tintCss is declared further down
+       but is hoisted, so calling it here is safe. */
+    function formatRangeTinted(maxC, minC) {
+      return '<span class="range-split">' +
+        '<span class="range-half" style="background: ' + tintCss(maxC) + '">' + formatRangeValue(maxC) + '</span>' +
+        '<span class="range-half" style="background: ' + tintCss(minC) + '">' + formatRangeValue(minC) + '</span>' +
+        '<span class="range-slash">/</span>' +
+      '</span>';
+    }
+
+    /* The unit is stated once, not once per column: on the main page the toggle is
+       always on screen, and in a popup it goes into the subtitle, because the modal
+       covers the toggle. */
+    function applyUnitTags() {
+      const note = document.getElementById("unit-note");
+      if (note) note.textContent = "in " + unitSuffix();
+    }
+
+    /* Subtitle text, which also carries the unit for the popups. */
+    function modalSub(country, title) {
+      return country + " · " + title + " · " + unitSuffix();
+    }
+
+    function setUnit(unit) {
+      if (unit !== "C" && unit !== "F") return;
+      currentUnit = unit;
+
+      try {
+        localStorage.setItem("weather-unit", unit);
+      } catch (e) {
+        /* storage may be unavailable; the toggle still works for this session */
+      }
+
+      const cBtn = document.getElementById("unit-c");
+      const fBtn = document.getElementById("unit-f");
+      if (cBtn) {
+        cBtn.classList.toggle("active", unit === "C");
+        cBtn.setAttribute("aria-pressed", String(unit === "C"));
+      }
+      if (fBtn) {
+        fBtn.classList.toggle("active", unit === "F");
+        fBtn.setAttribute("aria-pressed", String(unit === "F"));
+      }
+
+      refreshDisplays();
+    }
+
+    function refreshDisplays() {
+      renderInitialSkeleton(true);
+      renderWeatherRows();
+      applyUnitTags();
+      refreshOpenModals();
+    }
+
+    function initUnit() {
+      let stored = null;
+      try {
+        stored = localStorage.getItem("weather-unit");
+      } catch (e) {
+        stored = null;
+      }
+      currentUnit = stored === "F" ? "F" : "C";
+
+      const cBtn = document.getElementById("unit-c");
+      const fBtn = document.getElementById("unit-f");
+      if (cBtn) {
+        cBtn.classList.toggle("active", currentUnit === "C");
+        cBtn.setAttribute("aria-pressed", String(currentUnit === "C"));
+      }
+      if (fBtn) {
+        fBtn.classList.toggle("active", currentUnit === "F");
+        fBtn.setAttribute("aria-pressed", String(currentUnit === "F"));
+      }
+
+      applyUnitTags();
     }
 
     function computeRealFeelC(tempC, humidity, windMs) {
@@ -329,6 +586,61 @@
       return date.toLocaleTimeString("en-US", { timeZone: timeZone, weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false });
     }
 
+    function formatLocalDay(isoString, timeZone) {
+      return new Date(isoString).toLocaleDateString("en-US", { timeZone: timeZone, weekday: "short", month: "short", day: "numeric" });
+    }
+
+    function localDateKey(isoString, timeZone) {
+      return new Date(isoString).toLocaleDateString("en-CA", { timeZone: timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
+    }
+
+    function buildDailyForecast(series, timeZone) {
+      const order = [];
+      const days = {};
+
+      series.forEach(function(entry) {
+        const details = entry.data.instant.details;
+        const key = localDateKey(entry.time, timeZone);
+
+        if (!days[key]) {
+          days[key] = {
+            label: formatLocalDay(entry.time, timeZone),
+            tempsC: [],
+            feelsC: [],
+            humidity: []
+          };
+          order.push(key);
+        }
+
+        const tempC = details.air_temperature;
+        days[key].tempsC.push(tempC);
+        days[key].feelsC.push(computeRealFeelC(tempC, details.relative_humidity, details.wind_speed || 0));
+        days[key].humidity.push(details.relative_humidity);
+      });
+
+      return order.map(function(key) {
+        const day = days[key];
+        const maxC = Math.max.apply(null, day.tempsC);
+        const minC = Math.min.apply(null, day.tempsC);
+        const maxRfC = Math.max.apply(null, day.feelsC);
+        const minRfC = Math.min.apply(null, day.feelsC);
+        const avgHum = day.humidity.reduce(function(sum, value) { return sum + value; }, 0) / day.humidity.length;
+
+        return {
+          label: day.label,
+          maxC: Math.round(maxC),
+          minC: Math.round(minC),
+          maxF: toFInt(maxC),
+          minF: toFInt(minC),
+          maxRfC: Math.round(maxRfC),
+          minRfC: Math.round(minRfC),
+          maxRfF: toFInt(maxRfC),
+          minRfF: toFInt(minRfC),
+          humidity: Math.round(avgHum)
+        };
+      });
+    }
+
     function updateClocks() {
       const now = new Date();
       LOCATIONS.forEach(function(loc, idx) {
@@ -339,12 +651,19 @@
       });
     }
 
+    /* Which checkbox reveals a given group of extra locations. */
+    function isExtraVisible(loc) {
+      if (loc.extraGroup === "usa") {
+        return document.getElementById("region-toggle-usa").checked;
+      }
+      return document.getElementById("region-toggle").checked;
+    }
+
     function toggleExtraRegions() {
-      const showExtra = document.getElementById("region-toggle").checked;
       LOCATIONS.forEach(function(loc, idx) {
         const row = document.getElementById("row-" + idx);
         if (row && loc.extra) {
-          if (showExtra) {
+          if (isExtraVisible(loc)) {
             row.classList.remove("hidden-region");
           } else {
             row.classList.add("hidden-region");
@@ -365,41 +684,196 @@
       return { maxC: maxC, minC: minC, maxF: toFInt(maxC), minF: toFInt(minC) };
     }
 
-    function renderInitialSkeleton() {
+    function renderInitialSkeleton(keepData) {
       const tbody = document.getElementById("weather-tbody");
-      const showExtra = document.getElementById("region-toggle").checked;
 
       tbody.innerHTML = LOCATIONS.map(function(loc, idx) {
         const abs = getAbsSummary(loc.name);
-        const hiddenClass = (loc.extra && !showExtra) ? "hidden-region" : "";
-        return '<tr id="row-' + idx + '" class="' + hiddenClass + '">' +
+        const hiddenClass = (loc.extra && !isExtraVisible(loc)) ? "hidden-region" : "";
+        const skeleton = '<span class="skeleton"></span>';
+        const item = (keepData && weatherResults[idx]) ? weatherResults[idx] : null;
+        const cell = function(id, label, extraClass, body) {
+          return '<td data-label="' + label + '" class="num' + extraClass + '" id="' + id + '-' + idx + '">' + body + '</td>';
+        };
+        /* Raw Celsius sort keys, independent of the rendered string and so of the
+           unit toggle. A row with no data yet omits the numeric keys and sinks. */
+        const sortKeys = ' data-name="' + loc.name + '" data-absmax="' + abs.maxC + '"' +
+          (item
+            ? ' data-temp="' + item.tempC + '" data-rf="' + item.rfC + '" data-hum="' + item.humidity + '"' +
+              ' data-todaymax="' + item.todayMaxC + '" data-tommax="' + item.tomMaxC + '"'
+            : '');
+        return '<tr id="row-' + idx + '" class="' + hiddenClass + '"' + sortKeys + '>' +
           '<td>' +
             '<div class="loc-cell">' +
               '<button class="toggle-btn" onclick="openHourlyModal(' + idx + ')" title="24-hour forecast">[+]</button>' +
-              '<div class="loc-info">' +
+              '<div class="loc-info" title="' + loc.country + '">' +
                 '<span class="city">' + loc.name + '</span>' +
-                '<div class="sub-row">' +
-                  '<span class="country">' + loc.country + '</span>' +
-                  '<span id="clock-' + idx + '" class="local-clock">--:--</span>' +
-                '</div>' +
+                '<span class="country">' + loc.country + '</span>' +
+                '<span id="clock-' + idx + '" class="local-clock">--:--</span>' +
               '</div>' +
             '</div>' +
           '</td>' +
-          '<td data-label="Temp" class="num" id="temp-' + idx + '"><span class="skeleton"></span></td>' +
-          '<td data-label="Real Feel" class="num real-feel-col" id="rf-' + idx + '"><span class="skeleton"></span></td>' +
-          '<td data-label="Humidity" class="num" id="hum-' + idx + '"><span class="skeleton"></span></td>' +
-          '<td data-label="24h High / Low" class="num" id="today-' + idx + '"><span class="skeleton"></span></td>' +
-          '<td data-label="Tomorrow High / Low" class="num" id="tom-' + idx + '"><span class="skeleton"></span></td>' +
-          '<td data-label="Abs High / Low">' +
+          cell('temp', 'Temp', ' num-col', '<button class="cell-btn" onclick="openDailyModal(' + idx + ')" title="10-day forecast">' + (item ? formatTemp(item.tempC) : skeleton) + '</button>') +
+          cell('rf', 'Real Feel', ' real-feel-col num-col', '<button class="cell-btn" onclick="openDailyModal(' + idx + ')" title="10-day forecast">' + (item ? '<strong>' + formatTemp(item.rfC) + '</strong>' : skeleton) + '</button>') +
+          cell('hum', 'Humidity', ' num-col', item ? item.humidity + '%' : skeleton) +
+          cell('today', '24h High / Low', ' num-col', item ? formatRangeTinted(item.todayMaxC, item.todayMinC) : skeleton) +
+          cell('tom', 'Tomorrow High / Low', ' num-col', item ? formatRangeTinted(item.tomMaxC, item.tomMinC) : skeleton) +
+          '<td data-label="Abs High / Low" class="num-col">' +
             '<button class="abs-btn" onclick="openClimateModal(' + idx + ')" title="View monthly climate averages & records">' +
-              '<span class="primary-val">' + abs.maxF + '° / ' + abs.minF + '°F</span>' +
-              '<span class="secondary-val">' + abs.maxC + '° / ' + abs.minC + '°C</span>' +
+              '<span class="primary-val">' + formatRangeTinted(abs.maxC, abs.minC) + '</span>' +
             '</button>' +
           '</td>' +
         '</tr>';
       }).join("");
 
       updateClocks();
+      applySort();
+      applyTints();
+    }
+
+    function renderWeatherRows() {
+      if (!weatherResults.length) return;
+
+      weatherResults.forEach(function(item, idx) {
+        const tempEl = document.getElementById("temp-" + idx);
+        const rfEl = document.getElementById("rf-" + idx);
+        const humEl = document.getElementById("hum-" + idx);
+        const todayEl = document.getElementById("today-" + idx);
+        const tomEl = document.getElementById("tom-" + idx);
+
+        /* The rows were written before any data existed, so the sort keys are
+           added here, once the values are known. */
+        const row = document.getElementById("row-" + idx);
+        if (row) {
+          row.setAttribute("data-temp", item.tempC);
+          row.setAttribute("data-rf", item.rfC);
+          row.setAttribute("data-hum", item.humidity);
+          row.setAttribute("data-todaymax", item.todayMaxC);
+          row.setAttribute("data-tommax", item.tomMaxC);
+        }
+
+        if (tempEl) tempEl.innerHTML = '<button class="cell-btn" onclick="openDailyModal(' + idx + ')" title="10-day forecast">' + formatTemp(item.tempC) + '</button>';
+        if (rfEl) rfEl.innerHTML = '<button class="cell-btn" onclick="openDailyModal(' + idx + ')" title="10-day forecast">' + '<strong>' + formatTemp(item.rfC) + '</strong></button>';
+        if (humEl) humEl.innerHTML = item.humidity + '%';
+        if (todayEl) todayEl.innerHTML = formatRangeTinted(item.todayMaxC, item.todayMinC);
+        if (tomEl) tomEl.innerHTML = formatRangeTinted(item.tomMaxC, item.tomMinC);
+      });
+
+      applySort();
+      applyTints();
+    }
+
+    /* ---- Sorting -----------------------------------------------------------
+       Only the <tr> elements are reordered. LOCATIONS and weatherResults stay
+       paired by index, which every id-based lookup here depends on, and the sort
+       survives unit changes because the keys live in the DOM rather than in the
+       rendered text. */
+    const SORT_ATTRS = {
+      name: "data-name",
+      temp: "data-temp",
+      rf: "data-rf",
+      hum: "data-hum",
+      today: "data-todaymax",
+      tom: "data-tommax",
+      abs: "data-absmax"
+    };
+
+    let sortKey = null;
+    let sortDir = "ascending";
+
+    function sortRows(key) {
+      if (sortKey === key) {
+        sortDir = sortDir === "ascending" ? "descending" : "ascending";
+      } else {
+        sortKey = key;
+        sortDir = "ascending";
+      }
+      applySort();
+    }
+
+    function applySort() {
+      const tbody = document.getElementById("weather-tbody");
+      if (!tbody) return;
+
+      /* No column chosen yet: leave the curated LOCATIONS order alone and just
+         make sure no header is advertising a sort. */
+      if (sortKey === null) {
+        syncSortIndicators();
+        return;
+      }
+
+      const rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+      const attr = SORT_ATTRS[sortKey] || "data-name";
+      const dir = sortDir === "descending" ? -1 : 1;
+
+      rows.sort(function(a, b) {
+        const av = a.getAttribute(attr);
+        const bv = b.getAttribute(attr);
+        /* A row still waiting on its data has no key; keep it at the end in
+           both directions so the ordering never appears to shuffle on its own. */
+        if (av === null && bv === null) return 0;
+        if (av === null) return 1;
+        if (bv === null) return -1;
+        if (attr === "data-name") return av.localeCompare(bv) * dir;
+        return (Number(av) - Number(bv)) * dir;
+      });
+
+      rows.forEach(function(row) { tbody.appendChild(row); });
+
+      syncSortIndicators();
+    }
+
+    /* Both the desktop headers and the mobile chips call sortRows, so both have
+       to reflect the current state. */
+    function syncSortIndicators() {
+      Array.prototype.forEach.call(document.querySelectorAll(".sort-btn"), function(btn) {
+        const th = btn.closest("th");
+        if (th) {
+          th.setAttribute("aria-sort", (sortKey !== null && btn.getAttribute("data-sort-key") === sortKey) ? sortDir : "none");
+        }
+      });
+
+      Array.prototype.forEach.call(document.querySelectorAll(".sort-chip"), function(chip) {
+        chip.classList.toggle("active", sortKey !== null && chip.getAttribute("data-sort-key") === sortKey);
+      });
+
+      const status = document.getElementById("sort-status");
+      if (status) {
+        if (sortKey === null) {
+          status.textContent = "";
+        } else {
+          const btn = document.querySelector('.sort-btn[data-sort-key="' + sortKey + '"]');
+          /* data-label, not textContent: the header now also contains the unit
+             tag, which must not end up in the status line. */
+          const name = btn ? (btn.getAttribute("data-label") || sortKey) : sortKey;
+          const direction = sortKey === "name"
+            ? (sortDir === "descending" ? "Z to A" : "A to Z")
+            : (sortDir === "descending" ? "high to low" : "low to high");
+          status.textContent = name + ", " + direction;
+        }
+      }
+    }
+
+    /* ---- Temperature Tint --------------------------------------------------
+       A translucent wash, not a saturated fill: body text is #1a1a1a, so the
+       lightness stays high. Hover is an inset overlay (see .main-table rules) so
+       it darkens a tint instead of replacing it. Real Feel keeps its fixed
+       yellow column marker, so it is not tinted. This covers the single-value cells
+       only: a High / Low pair is tinted per value by formatRangeTinted, because one
+       gradient cannot follow two numbers that move independently. The Abs cell is
+       tinted the same way -- its button carries an opaque background, but the spans
+       paint on top of it. */
+    function tintCss(c) {
+      const t = Math.max(-15, Math.min(35, c));
+      const hue = 210 - ((t + 15) / 50) * 210;
+      return "hsl(" + Math.round(hue) + ", 62%, 92%)";
+    }
+
+    function applyTints() {
+      weatherResults.forEach(function(item, idx) {
+        const tempEl = document.getElementById("temp-" + idx);
+        if (tempEl) tempEl.style.background = tintCss(item.tempC);
+      });
     }
 
     function openHourlyModal(index) {
@@ -407,18 +881,19 @@
       if (!item) return;
 
       document.getElementById("modal-city").textContent = item.name;
-      document.getElementById("modal-country").textContent = item.country + " · Next 24 Hours";
+      document.getElementById("modal-country").textContent = modalSub(item.country, "Next 24 Hours");
 
       document.getElementById("modal-hourly-body").innerHTML = item.hourly.map(function(h) {
         return '<tr>' +
           '<td><strong>' + h.time + '</strong></td>' +
-          '<td>' + h.tempF + '°F <span class="country">(' + h.tempC + '°C)</span></td>' +
-          '<td class="rf-cell">' + h.rfF + '°F <span class="country">(' + h.rfC + '°C)</span></td>' +
+          '<td class="temp-cell">' + formatValueTinted(h.tempC) + '</td>' +
+          '<td class="rf-cell">' + formatValueTinted(h.rfC) + '</td>' +
           '<td>' + h.humidity + '%</td>' +
         '</tr>';
       }).join("");
 
       document.getElementById("hourly-modal").classList.add("open");
+      document.getElementById("hourly-modal").dataset.index = String(index);
     }
 
     function openClimateModal(index) {
@@ -427,19 +902,56 @@
       if (!loc || !months) return;
 
       document.getElementById("climate-city").textContent = loc.name;
-      document.getElementById("climate-country").textContent = loc.country + " · Monthly Averages & All-Time Records";
+      document.getElementById("climate-country").textContent = modalSub(loc.country, "Monthly Averages & All-Time Records");
 
       document.getElementById("modal-climate-body").innerHTML = months.map(function(m, mIdx) {
         const avgHighC = m.at(0), avgLowC = m.at(1), avgHum = m.at(2), absHighC = m.at(3), absLowC = m.at(4);
         return '<tr>' +
           '<td><strong>' + MONTHS.at(mIdx) + '</strong></td>' +
-          '<td>' + toFInt(avgHighC) + '° / ' + toFInt(avgLowC) + '°F <span class="country">(' + avgHighC + '° / ' + avgLowC + '°C)</span></td>' +
+          '<td class="temp-cell">' + formatRangeTinted(avgHighC, avgLowC) + '</td>' +
           '<td>' + avgHum + '%</td>' +
-          '<td><strong>' + toFInt(absHighC) + '° / ' + toFInt(absLowC) + '°F</strong> <span class="country">(' + absHighC + '° / ' + absLowC + '°C)</span></td>' +
+          '<td class="temp-cell"><strong>' + formatRangeTinted(absHighC, absLowC) + '</strong></td>' +
         '</tr>';
       }).join("");
 
       document.getElementById("climate-modal").classList.add("open");
+      document.getElementById("climate-modal").dataset.index = String(index);
+    }
+
+    function openDailyModal(index) {
+      const item = weatherResults.at(index);
+      if (!item || !item.daily) return;
+
+      document.getElementById("daily-city").textContent = item.name;
+      document.getElementById("daily-country").textContent = modalSub(item.country, "10-Day Forecast");
+
+      document.getElementById("modal-daily-body").innerHTML = item.daily.map(function(day) {
+        return '<tr>' +
+          '<td><strong>' + day.label + '</strong></td>' +
+          '<td class="temp-cell">' + formatRangeTinted(day.maxC, day.minC) + '</td>' +
+          '<td class="rf-cell">' + formatRangeTinted(day.maxRfC, day.minRfC) + '</td>' +
+          '<td>' + day.humidity + '%</td>' +
+        '</tr>';
+      }).join("");
+
+      document.getElementById("daily-modal").classList.add("open");
+      document.getElementById("daily-modal").dataset.index = String(index);
+    }
+
+    /* Re-render any modal that is currently open so a unit change applies immediately. */
+    function refreshOpenModals() {
+      const specs = [
+        { id: "hourly-modal", open: openHourlyModal },
+        { id: "climate-modal", open: openClimateModal },
+        { id: "daily-modal", open: openDailyModal }
+      ];
+
+      specs.forEach(function(spec) {
+        const el = document.getElementById(spec.id);
+        if (el && el.classList.contains("open") && el.dataset.index !== undefined) {
+          spec.open(Number(el.dataset.index));
+        }
+      });
     }
 
     function closeModal(modalId) {
@@ -456,6 +968,7 @@
       if (event.key === "Escape") {
         closeModal("hourly-modal");
         closeModal("climate-modal");
+        closeModal("daily-modal");
       }
     });
 
@@ -504,6 +1017,8 @@
             };
           });
 
+          const dailyForecast = buildDailyForecast(series, loc.tz);
+
           return {
             name: loc.name,
             country: loc.country,
@@ -520,19 +1035,14 @@
             tomMinF: toF(Math.min.apply(null, tomorrowTemps)),
             tomMaxC: Math.max.apply(null, tomorrowTemps),
             tomMinC: Math.min.apply(null, tomorrowTemps),
-            hourly: hourlyForecast
+            hourly: hourlyForecast,
+            daily: dailyForecast
           };
         });
 
         weatherResults = await Promise.all(requests);
 
-        weatherResults.forEach(function(item, idx) {
-          document.getElementById("temp-" + idx).innerHTML = '<span>' + item.tempF + '°F</span><span class="country">' + item.tempC + '°C</span>';
-          document.getElementById("rf-" + idx).innerHTML = '<span><strong>' + item.rfF + '°F</strong></span><span class="country">' + item.rfC + '°C</span>';
-          document.getElementById("hum-" + idx).innerHTML = '<span>' + item.humidity + '%</span><span class="country"></span>';
-          document.getElementById("today-" + idx).innerHTML = '<span>' + item.todayMaxF + '° / ' + item.todayMinF + '°F</span><span class="country">' + item.todayMaxC + '° / ' + item.todayMinC + '°C</span>';
-          document.getElementById("tom-" + idx).innerHTML = '<span>' + item.tomMaxF + '° / ' + item.tomMinF + '°F</span><span class="country">' + item.tomMaxC + '° / ' + item.tomMinC + '°C</span>';
-        });
+        renderWeatherRows();
 
         const now = new Date();
         updatedEl.textContent = "Updated " + now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -542,6 +1052,7 @@
       }
     }
 
+    initUnit();
     renderInitialSkeleton();
     loadWeather();
     setInterval(updateClocks, 1000);
