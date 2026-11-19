@@ -59,11 +59,34 @@
     .sort-btn { background: none; border: none; padding: 0; margin: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; text-align: inherit; cursor: pointer; width: 100%; }
     .nowrap { white-space: nowrap; }
 
+    /* Time Label
+       The clock is pushed to the right edge of the Locality cell by the flex
+       layout, so a right-aligned label in the header sits directly above the
+       HH:MM column. That is the alignment a separate Time column would have
+       bought, without spending a column on five characters. The label is not a
+       button: sorting by local time would order the rows by timezone offset,
+       which is not a distinction anyone is looking for. */
+    .loc-head-inner { display: flex; align-items: center; justify-content: space-between; gap: 0.7rem; }
+    .loc-head-inner .sort-btn { flex: 1 1 auto; width: auto; }
+    .loc-head-time { flex-shrink: 0; }
+
     /* Single-Value Tint
-       Real Feel is a temperature too, but its cell keeps the fixed yellow column
-       marker. Painting the wash on the value rather than the cell adds the hue
-       without giving up the marker, which is how the Abs button works as well. */
-    .tint-val { display: inline-block; padding: 0.05rem 0.3rem; border-radius: 4px; }
+       A child of the value cell rather than its background, so one mechanism works
+       everywhere: inside the clickable cells, on top of the Abs button's own fill,
+       and in the popups. Real Feel keeps the yellow column marker underneath; the
+       wash does not cover it because a block fills only the content box, leaving
+       the cell padding visible (see Real Feel Highlight). Bold weight carries that
+       column a second time, so it still reads without relying on colour alone.
+       Block, not inline-block: the wash fills the cell, which is what the High /
+       Low halves already do (see .range-half). All six numeric columns then read
+       as colour fields of equal weight, and a wide band is far easier to compare
+       down the column than a small pill. */
+    .tint-val { display: block; padding: 0.05rem 0.3rem; border-radius: 4px; }
+    .tint-val-bold { font-weight: 700; }
+    /* The hover overlay is an inset box-shadow on the cell, which paints beneath
+       its children, so a cell-filling tint would hide it entirely. Dimming the
+       tint is the only cue left, so it has to be stronger than a hint. */
+    table.main-table tr:hover .tint-val { filter: brightness(0.94); }
     .sort-btn:hover { color: #cbd5e1; }
     .sort-btn:focus-visible { outline: 2px solid #93c5fd; outline-offset: 2px; }
     th[aria-sort="ascending"] .sort-btn::after { content: " \25B2"; font-size: 0.8em; }
@@ -75,7 +98,12 @@
     table.main-table tr:hover td { box-shadow: inset 0 0 0 999px rgba(15, 23, 42, 0.035); }
     table.main-table tr.hidden-region { display: none; }
 
-    /* Real Feel Highlight */
+    /* Real Feel Highlight
+       The yellow is a fixed column marker, kept alongside the per-value wash. The
+       wash stays full width and the yellow is not covered, because a block inside
+       a td fills the content box only: the cell's 1rem of horizontal padding shows
+       through as a yellow fringe, and .cell-btn's -0.25rem margin takes back only
+       a quarter of that on each side. */
     th.real-feel-col { background: #3b4d61; }
     td.real-feel-col { background: #fefce8; }
     table.main-table tr:hover td.real-feel-col { background: #fef9c3; }
@@ -158,6 +186,9 @@
     table.popup-table td { padding: 0.55rem 1rem; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
     table.popup-table tr:nth-child(even) td { background: #fafafa; }
     table.popup-table td.rf-cell { background: #fefce8; font-weight: 600; }
+    /* The wash is a block inside the cell, so it needs the same small inset the
+       main table gives it to keep the fill off the cell's own padding edge. */
+    table.popup-table .tint-val { padding: 0.05rem 0.35rem; }
     /* Temperature cells tint their own values, never the cell, so the zebra rule
        above still applies to the row. */
     table.popup-table td.temp-cell { font-variant-numeric: tabular-nums; }
@@ -249,7 +280,7 @@
     <table class="main-table">
       <thead>
         <tr>
-          <th style="width: 24%;" aria-sort="none"><button type="button" class="sort-btn" data-sort-key="name" data-label="Locality" onclick="sortRows('name')">Locality</button></th>
+          <th style="width: 24%;" aria-sort="none"><span class="loc-head-inner"><button type="button" class="sort-btn" data-sort-key="name" data-label="Locality" onclick="sortRows('name')">Locality</button><span class="loc-head-time">Time</span></span></th>
           <th class="num-col" style="width: 11%;" aria-sort="none"><button type="button" class="sort-btn" data-sort-key="temp" data-label="Temp" onclick="sortRows('temp')">Temp</button></th>
           <th class="real-feel-col num-col" style="width: 11%;" aria-sort="none"><button type="button" class="sort-btn" data-sort-key="rf" data-label="Real Feel" onclick="sortRows('rf')">Real Feel</button></th>
           <th class="num-col" style="width: 10%;" aria-sort="none"><button type="button" class="sort-btn" data-sort-key="hum" data-label="Humidity" onclick="sortRows('hum')">Humidity</button></th>
@@ -477,8 +508,11 @@
 
     /* A single value with its wash on the text rather than the cell, for columns
        that keep their own background (Real Feel) or share a row with one. */
-    function formatValueTinted(c) {
-      return '<span class="tint-val" style="background: ' + tintCss(c) + '">' + formatTemp(c) + '</span>';
+    /* bold is passed rather than wrapping the result in <strong>: a block-level
+       span inside an inline element makes the browser invent anonymous boxes,
+       which breaks the full-width wash. */
+    function formatValueTinted(c, bold) {
+      return '<span class="tint-val' + (bold ? ' tint-val-bold' : '') + '" style="background: ' + tintCss(c) + '">' + formatTemp(c) + '</span>';
     }
 
     /* The cell is divided in half: high on the left, low on the right, each
@@ -713,8 +747,8 @@
               '</div>' +
             '</div>' +
           '</td>' +
-          cell('temp', 'Temp', ' num-col', '<button class="cell-btn" onclick="openDailyModal(' + idx + ')" title="10-day forecast">' + (item ? formatTemp(item.tempC) : skeleton) + '</button>') +
-          cell('rf', 'Real Feel', ' real-feel-col num-col', '<button class="cell-btn" onclick="openDailyModal(' + idx + ')" title="10-day forecast">' + (item ? '<strong>' + formatTemp(item.rfC) + '</strong>' : skeleton) + '</button>') +
+          cell('temp', 'Temp', ' num-col', '<button class="cell-btn" onclick="openDailyModal(' + idx + ')" title="10-day forecast">' + (item ? formatValueTinted(item.tempC) : skeleton) + '</button>') +
+          cell('rf', 'Real Feel', ' real-feel-col num-col', '<button class="cell-btn" onclick="openDailyModal(' + idx + ')" title="10-day forecast">' + (item ? formatValueTinted(item.rfC, true) : skeleton) + '</button>') +
           cell('hum', 'Humidity', ' num-col', item ? item.humidity + '%' : skeleton) +
           cell('today', '24h High / Low', ' num-col', item ? formatRangeTinted(item.todayMaxC, item.todayMinC) : skeleton) +
           cell('tom', 'Tomorrow High / Low', ' num-col', item ? formatRangeTinted(item.tomMaxC, item.tomMinC) : skeleton) +
@@ -728,7 +762,6 @@
 
       updateClocks();
       applySort();
-      applyTints();
     }
 
     function renderWeatherRows() {
@@ -752,15 +785,14 @@
           row.setAttribute("data-tommax", item.tomMaxC);
         }
 
-        if (tempEl) tempEl.innerHTML = '<button class="cell-btn" onclick="openDailyModal(' + idx + ')" title="10-day forecast">' + formatTemp(item.tempC) + '</button>';
-        if (rfEl) rfEl.innerHTML = '<button class="cell-btn" onclick="openDailyModal(' + idx + ')" title="10-day forecast">' + '<strong>' + formatTemp(item.rfC) + '</strong></button>';
+        if (tempEl) tempEl.innerHTML = '<button class="cell-btn" onclick="openDailyModal(' + idx + ')" title="10-day forecast">' + formatValueTinted(item.tempC) + '</button>';
+        if (rfEl) rfEl.innerHTML = '<button class="cell-btn" onclick="openDailyModal(' + idx + ')" title="10-day forecast">' + formatValueTinted(item.rfC, true) + '</button>';
         if (humEl) humEl.innerHTML = item.humidity + '%';
         if (todayEl) todayEl.innerHTML = formatRangeTinted(item.todayMaxC, item.todayMinC);
         if (tomEl) tomEl.innerHTML = formatRangeTinted(item.tomMaxC, item.tomMinC);
       });
 
       applySort();
-      applyTints();
     }
 
     /* ---- Sorting -----------------------------------------------------------
@@ -843,8 +875,8 @@
           status.textContent = "";
         } else {
           const btn = document.querySelector('.sort-btn[data-sort-key="' + sortKey + '"]');
-          /* data-label, not textContent: the header now also contains the unit
-             tag, which must not end up in the status line. */
+          /* data-label, not textContent: the header wraps its text in a span for
+             wrapping control, which must not end up in the status line. */
           const name = btn ? (btn.getAttribute("data-label") || sortKey) : sortKey;
           const direction = sortKey === "name"
             ? (sortDir === "descending" ? "Z to A" : "A to Z")
@@ -857,23 +889,25 @@
     /* ---- Temperature Tint --------------------------------------------------
        A translucent wash, not a saturated fill: body text is #1a1a1a, so the
        lightness stays high. Hover is an inset overlay (see .main-table rules) so
-       it darkens a tint instead of replacing it. Real Feel keeps its fixed
-       yellow column marker, so it is not tinted. This covers the single-value cells
-       only: a High / Low pair is tinted per value by formatRangeTinted, because one
-       gradient cannot follow two numbers that move independently. The Abs cell is
-       tinted the same way -- its button carries an opaque background, but the spans
-       paint on top of it. */
+       it darkens a tint instead of replacing it.
+       Two renderings, because one wash cannot follow two numbers moving
+       independently: formatRangeTinted splits a High / Low pair, and
+       formatValueTinted tints a single value. Every temperature in the page uses
+       the value form, never a cell background, because the Real Feel cell carries
+       the yellow column marker, the Abs cell a button fill, and the Temp and Real
+       Feel cells sit inside .cell-btn. Painting the value keeps the hue uniform
+       across all of them and leaves the row hover overlay unobstructed. */
+    /* The clamp is the range the hue ramp spans. At -15 everything colder than
+       -15 collapsed onto one colour, so a -26 row and a -7 row were hard to tell
+       apart; -25 covers every temperature actually reached at these locations
+       while still leaving the ramp wide enough for 3.5 degrees of hue per degree
+       Celsius. Saturation and lightness are tuned so the hue survives at all: at
+       62% / 92% the wash was near enough to white that a 30 degree hue shift
+       changed the RGB by a dozen units, which is invisible. */
     function tintCss(c) {
-      const t = Math.max(-15, Math.min(35, c));
-      const hue = 210 - ((t + 15) / 50) * 210;
-      return "hsl(" + Math.round(hue) + ", 62%, 92%)";
-    }
-
-    function applyTints() {
-      weatherResults.forEach(function(item, idx) {
-        const tempEl = document.getElementById("temp-" + idx);
-        if (tempEl) tempEl.style.background = tintCss(item.tempC);
-      });
+      const t = Math.max(-25, Math.min(35, c));
+      const hue = 210 - ((t + 25) / 60) * 210;
+      return "hsl(" + Math.round(hue) + ", 78%, 85.5%)";
     }
 
     function openHourlyModal(index) {
@@ -887,7 +921,7 @@
         return '<tr>' +
           '<td><strong>' + h.time + '</strong></td>' +
           '<td class="temp-cell">' + formatValueTinted(h.tempC) + '</td>' +
-          '<td class="rf-cell">' + formatValueTinted(h.rfC) + '</td>' +
+          '<td class="rf-cell">' + formatValueTinted(h.rfC, true) + '</td>' +
           '<td>' + h.humidity + '%</td>' +
         '</tr>';
       }).join("");
