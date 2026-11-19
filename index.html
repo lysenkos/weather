@@ -22,6 +22,8 @@
     .refresh-btn { background: #2c3e50; color: white; border: none; border-radius: 8px; padding: 0.48rem 0.9rem; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
     .refresh-btn:hover { background: #1e293b; }
     .updated-text { font-size: 0.82rem; color: #64748b; font-variant-numeric: tabular-nums; }
+    /* Off-screen, not display: none, so it stays in the accessibility tree. */
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
     /* Unit Toggle */
     .unit-toggle { display: inline-flex; background: white; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
@@ -103,9 +105,19 @@
        wash stays full width and the yellow is not covered, because a block inside
        a td fills the content box only: the cell's 1rem of horizontal padding shows
        through as a yellow fringe, and .cell-btn's -0.25rem margin takes back only
-       a quarter of that on each side. */
-    th.real-feel-col { background: #3b4d61; }
-    td.real-feel-col { background: #fefce8; }
+       a quarter of that on each side.
+       The wash on Temp is full width too, and #fefce8 is close enough to white
+       that a pale fill alone stops reading as a column once a tinted cell sits
+       next to it. A pair of neutral grey hairlines restores the column edge. Grey
+       rather than amber: amber sits too close to the fill to carry at 1px, and a
+       grey edge reads as structure instead of as another control. #94a3b8 rather
+       than the lighter #cbd5e1, which is the Abs button's own border colour and
+       would make the edge look like a clickable control. Only left and right: the
+       rows already separate with their own bottom border, and a boxed strip would
+       fight that rhythm. Under border-collapse the neighbours have no vertical
+       borders, so nothing doubles up. */
+    th.real-feel-col { background: #3b4d61; border-left: 1px solid #94a3b8; border-right: 1px solid #94a3b8; }
+    td.real-feel-col { background: #fefce8; border-left: 1px solid #94a3b8; border-right: 1px solid #94a3b8; }
     table.main-table tr:hover td.real-feel-col { background: #fef9c3; }
 
     /* Locality Cell: City and Clock on One Line
@@ -185,7 +197,12 @@
     table.popup-table th { position: sticky; top: 0; background: #f1f5f9; color: #475569; font-size: 0.76rem; text-transform: uppercase; padding: 0.6rem 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; z-index: 2; }
     table.popup-table td { padding: 0.55rem 1rem; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
     table.popup-table tr:nth-child(even) td { background: #fafafa; }
-    table.popup-table td.rf-cell { background: #fefce8; font-weight: 600; }
+    /* Same marker as the main table: a pale fill plus neutral grey hairlines, so
+       the column still reads when a tinted cell sits beside it. The tbody is named
+       in the selector because the even-row zebra rule above outranks a plain
+       `td.rf-cell` and would otherwise repaint every second row white. */
+    table.popup-table tbody tr td.rf-cell { background: #fefce8; font-weight: 600; border-left: 1px solid #94a3b8; border-right: 1px solid #94a3b8; }
+    table.popup-table th.rf-cell { background: #f1f5f9; border-left: 1px solid #94a3b8; border-right: 1px solid #94a3b8; }
     /* The wash is a block inside the cell, so it needs the same small inset the
        main table gives it to keep the fill off the cell's own padding edge. */
     table.popup-table .tint-val { padding: 0.05rem 0.35rem; }
@@ -234,6 +251,10 @@
       table.main-table td.num-col { text-align: left; }
       table.main-table td.num-col .abs-btn { text-align: left; }
       table.main-table td.num-col .cell-btn { text-align: left; }
+      /* Each td is its own grid row here, so the column's vertical hairlines
+         would show up as short stray ticks beside the label. The fill and the
+         bold weight still mark the Real Feel row. */
+      table.main-table td.real-feel-col { border-left: none; border-right: none; }
       /* The headers are hidden here, so the sort controls would otherwise be
          unreachable on a phone. */
       .sort-controls { display: flex; }
@@ -259,6 +280,7 @@
         </div>
         <button class="refresh-btn" onclick="loadWeather()">Refresh</button>
         <span id="last-updated" class="updated-text">Loading...</span>
+        <span id="refresh-hint" class="sr-only"></span>
       </div>
     </div>
 
@@ -308,7 +330,7 @@
             <tr>
               <th>Local Time</th>
               <th>Temp</th>
-              <th>Real Feel</th>
+              <th class="rf-cell">Real Feel</th>
               <th>Humidity</th>
             </tr>
           </thead>
@@ -358,7 +380,7 @@
             <tr>
               <th>Day</th>
               <th><span class="nowrap">High / Low</span></th>
-              <th>Real Feel <span class="nowrap">High / Low</span></th>
+              <th class="rf-cell">Real Feel <span class="nowrap">High / Low</span></th>
               <th>Humidity</th>
             </tr>
           </thead>
@@ -483,6 +505,10 @@
     let weatherResults = [];
     let currentUnit = "C";
 
+    /* Timer and tooltip both read this, so the wording cannot drift from it. */
+    const REFRESH_MS = 900000;
+    const REFRESH_LABEL = "Auto-refreshes every " + Math.round(REFRESH_MS / 60000) + " minutes";
+
     function toF(c) {
       return ((c * 9 / 5) + 32).toFixed(1);
     }
@@ -498,8 +524,12 @@
       return currentUnit === "C" ? "°C" : "°F";
     }
 
+    /* Whole degrees for the single-value cells. A tenth of a degree is below the
+       accuracy of the forecast anyway, and at this size it reads as noise next to
+       the High / Low pairs, which are already rounded. Rounding happens at render
+       time, so the stored Celsius keeps full precision for sorting. */
     function formatTemp(c) {
-      return currentUnit === "C" ? Number(c).toFixed(1) + "°" : toF(c) + "°";
+      return currentUnit === "C" ? Math.round(c) + "°" : toFInt(c) + "°";
     }
 
     function formatRangeValue(c) {
@@ -749,7 +779,7 @@
           '</td>' +
           cell('temp', 'Temp', ' num-col', '<button class="cell-btn" onclick="openDailyModal(' + idx + ')" title="10-day forecast">' + (item ? formatValueTinted(item.tempC) : skeleton) + '</button>') +
           cell('rf', 'Real Feel', ' real-feel-col num-col', '<button class="cell-btn" onclick="openDailyModal(' + idx + ')" title="10-day forecast">' + (item ? formatValueTinted(item.rfC, true) : skeleton) + '</button>') +
-          cell('hum', 'Humidity', ' num-col', item ? item.humidity + '%' : skeleton) +
+          cell('hum', 'Humidity', ' num-col', item ? Math.round(item.humidity) + '%' : skeleton) +
           cell('today', '24h High / Low', ' num-col', item ? formatRangeTinted(item.todayMaxC, item.todayMinC) : skeleton) +
           cell('tom', 'Tomorrow High / Low', ' num-col', item ? formatRangeTinted(item.tomMaxC, item.tomMinC) : skeleton) +
           '<td data-label="Abs High / Low" class="num-col">' +
@@ -787,7 +817,7 @@
 
         if (tempEl) tempEl.innerHTML = '<button class="cell-btn" onclick="openDailyModal(' + idx + ')" title="10-day forecast">' + formatValueTinted(item.tempC) + '</button>';
         if (rfEl) rfEl.innerHTML = '<button class="cell-btn" onclick="openDailyModal(' + idx + ')" title="10-day forecast">' + formatValueTinted(item.rfC, true) + '</button>';
-        if (humEl) humEl.innerHTML = item.humidity + '%';
+        if (humEl) humEl.innerHTML = Math.round(item.humidity) + '%';
         if (todayEl) todayEl.innerHTML = formatRangeTinted(item.todayMaxC, item.todayMinC);
         if (tomEl) tomEl.innerHTML = formatRangeTinted(item.tomMaxC, item.tomMinC);
       });
@@ -1080,6 +1110,10 @@
 
         const now = new Date();
         updatedEl.textContent = "Updated " + now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+        /* Label stays HH:MM; the tooltip adds seconds, the only way to tell two
+           refreshes in the same minute apart. */
+        const exact = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+        updatedEl.title = REFRESH_LABEL + " · Last loaded " + exact;
 
       } catch (err) {
         errorBox.innerHTML = '<div class="error"><strong>Failed to load weather data:</strong> ' + err.message + '</div>';
@@ -1087,10 +1121,15 @@
     }
 
     initUnit();
+    /* Set before the first fetch resolves, so the period is described while loading. */
+    const updatedInit = document.getElementById("last-updated");
+    if (updatedInit) updatedInit.title = REFRESH_LABEL;
+    const hintInit = document.getElementById("refresh-hint");
+    if (hintInit) hintInit.textContent = REFRESH_LABEL;
     renderInitialSkeleton();
     loadWeather();
     setInterval(updateClocks, 1000);
-    setInterval(loadWeather, 900000);
+    setInterval(loadWeather, REFRESH_MS);
   </script>
 </body>
 </html>
